@@ -9,7 +9,7 @@ function AppInner() {
     return (
       <div style={{
         minHeight: "100vh",
-        background: "linear-gradient(160deg, #fef9f4 0%, #fdf2e9 30%, #f9ede4 60%, #f5e6da 100%)",
+        background: "#fdf2e9",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}>
         <p style={{

@@ -7,7 +7,7 @@ const fonts = {
   accent: "'Caveat', cursive",
 };
 
-const bg = "linear-gradient(160deg, #fef9f4 0%, #fdf2e9 30%, #f9ede4 60%, #f5e6da 100%)";
+const bg = "#fdf2e9";
 const textMain = "#3d2c2c";
 const textSoft = "#8a7575";
 const accent = "#c97b6b";

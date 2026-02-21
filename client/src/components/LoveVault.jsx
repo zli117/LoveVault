@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../AuthContext.jsx";
 import { entries as entriesApi } from "../api.js";
 
@@ -17,8 +17,22 @@ const fonts = {
   accent: "'Caveat', cursive",
 };
 
+function useIsDesktop(breakpoint = 768) {
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= breakpoint
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${breakpoint}px)`);
+    const handler = (e) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isDesktop;
+}
+
 export default function LoveVault() {
   const { user, logout } = useAuth();
+  const isDesktop = useIsDesktop();
   const [entries, setEntries] = useState([]);
   const [view, setView] = useState("home"); // home, add, sos
   const [newEntry, setNewEntry] = useState({ text: "", category: "care" });
@@ -86,15 +100,15 @@ export default function LoveVault() {
   const filteredEntries = filterCat === "all" ? entries : entries.filter((e) => e.category === filterCat);
 
   // --- STYLES ---
-  const bg = "linear-gradient(160deg, #fef9f4 0%, #fdf2e9 30%, #f9ede4 60%, #f5e6da 100%)";
-  const cardBg = "rgba(255, 255, 255, 0.72)";
+  const bg = "#fdf2e9";
+  const cardBg = "rgba(255, 255, 255, 0.45)";
   const textMain = "#3d2c2c";
   const textSoft = "#8a7575";
   const accent = "#c97b6b";
 
   if (!loadingDone) {
     return (
-      <div style={{ minHeight: "100vh", background: bg, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: "#fdf2e9", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ fontFamily: fonts.accent, fontSize: 24, color: textSoft }}>Loading your memories...</p>
       </div>
     );
@@ -172,17 +186,189 @@ export default function LoveVault() {
     );
   }
 
+  // =================== SHARED PANELS ===================
+  const browsePanel = (
+    <div style={{ padding: isDesktop ? 0 : "0 28px" }}>
+      {/* Filter chips */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
+        <button onClick={() => setFilterCat("all")} style={{
+          padding: "6px 14px", borderRadius: 20, border: "none",
+          background: filterCat === "all" ? accent : "rgba(255,255,255,0.5)",
+          color: filterCat === "all" ? "#fff" : textSoft,
+          fontFamily: fonts.body, fontSize: 13, cursor: "pointer",
+        }}>All ({entries.length})</button>
+        {CATEGORIES.map((cat) => {
+          const count = entries.filter((e) => e.category === cat.id).length;
+          if (count === 0) return null;
+          return (
+            <button key={cat.id} onClick={() => setFilterCat(cat.id)} style={{
+              padding: "6px 14px", borderRadius: 20, border: "none",
+              background: filterCat === cat.id ? cat.color : "rgba(255,255,255,0.5)",
+              color: filterCat === cat.id ? textMain : textSoft,
+              fontFamily: fonts.body, fontSize: 13, cursor: "pointer",
+            }}>
+              {cat.emoji} {count}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Entries */}
+      {filteredEntries.length === 0 ? (
+        <div style={{
+          textAlign: "center", padding: "60px 20px",
+          background: cardBg, borderRadius: 20,
+        }}>
+          <p style={{ fontSize: 40, marginBottom: 12 }}>📝</p>
+          <p style={{ fontFamily: fonts.display, fontSize: 18, color: textMain, marginBottom: 8 }}>
+            No memories yet
+          </p>
+          <p style={{ fontFamily: fonts.body, fontSize: 14, color: textSoft }}>
+            Start adding the little things you do for each other
+          </p>
+          {!isDesktop && (
+            <button onClick={() => setView("add")} style={{
+              marginTop: 16, padding: "10px 24px", borderRadius: 10,
+              border: "none", background: accent, color: "#fff",
+              fontFamily: fonts.body, fontSize: 14, cursor: "pointer",
+            }}>
+              Add your first memory
+            </button>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {filteredEntries.map((entry) => {
+            const cat = getCat(entry.category);
+            return (
+              <div key={entry.id} style={{
+                background: cardBg, borderRadius: 16, padding: "20px 22px",
+                border: "1px solid rgba(201,123,107,0.08)",
+                borderLeft: `4px solid ${cat.color}`,
+                transition: "transform 0.15s",
+                position: "relative",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>{cat.emoji}</span>
+                    <span style={{
+                      fontFamily: fonts.body, fontSize: 12, fontWeight: 600,
+                      color: textSoft, textTransform: "uppercase", letterSpacing: 0.5,
+                    }}>
+                      {cat.label}
+                    </span>
+                  </div>
+                  <button onClick={() => deleteEntry(entry.id)} style={{
+                    background: "none", border: "none", color: "#d4c5c5",
+                    cursor: "pointer", fontSize: 16, padding: "0 4px",
+                  }} title="Delete">×</button>
+                </div>
+                <p style={{
+                  fontFamily: fonts.body, fontSize: 15, lineHeight: 1.65,
+                  color: textMain, margin: "0 0 12px 0",
+                }}>
+                  {entry.text}
+                </p>
+                <div style={{
+                  display: "flex", justifyContent: "space-between", alignItems: "center",
+                }}>
+                  <span style={{
+                    fontFamily: fonts.accent, fontSize: 14, color: textSoft,
+                  }}>
+                    — {entry.author_name}
+                  </span>
+                  <span style={{
+                    fontFamily: fonts.body, fontSize: 12, color: "#c4b5b5",
+                  }}>
+                    {formatDate(entry.created_at)}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
+  const addPanel = (
+    <div style={{ padding: isDesktop ? 0 : "0 28px" }}>
+      <div style={{
+        background: cardBg, borderRadius: 20, padding: 28,
+        border: "1px solid rgba(201,123,107,0.08)",
+        ...(isDesktop ? { position: "sticky", top: 28 } : {}),
+      }}>
+        <div style={{
+          fontFamily: fonts.accent, fontSize: 16, color: accent,
+          marginBottom: 20, textAlign: "center",
+        }}>
+          Writing as {user.displayName} 💕
+        </div>
+
+        <label style={{ fontFamily: fonts.body, fontSize: 13, fontWeight: 600, color: textSoft, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+          Category
+        </label>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+          {CATEGORIES.map((cat) => (
+            <button key={cat.id} onClick={() => setNewEntry({ ...newEntry, category: cat.id })} style={{
+              padding: "8px 14px", borderRadius: 20,
+              border: newEntry.category === cat.id ? `2px solid ${accent}` : "2px solid #e8ddd6",
+              background: newEntry.category === cat.id ? cat.color + "40" : "transparent",
+              color: newEntry.category === cat.id ? textMain : textSoft,
+              fontFamily: fonts.body, fontSize: 13, cursor: "pointer",
+              transition: "all 0.15s",
+            }}>
+              {cat.emoji} {cat.label}
+            </button>
+          ))}
+        </div>
+
+        <label style={{ fontFamily: fonts.body, fontSize: 13, fontWeight: 600, color: textSoft, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
+          What happened?
+        </label>
+        <textarea
+          value={newEntry.text}
+          onChange={(e) => setNewEntry({ ...newEntry, text: e.target.value })}
+          placeholder="e.g. She went to sleep on the couch so I wouldn't be woken up by her teeth grinding, even though the couch is uncomfortable..."
+          style={{
+            width: "100%", minHeight: 120, padding: 16, borderRadius: 14,
+            border: "2px solid #e8ddd6", background: "rgba(255,255,255,0.6)",
+            fontFamily: fonts.body, fontSize: 15, color: textMain, lineHeight: 1.6,
+            resize: "vertical", outline: "none", boxSizing: "border-box",
+            transition: "border-color 0.2s",
+          }}
+          onFocus={(e) => e.target.style.borderColor = accent}
+          onBlur={(e) => e.target.style.borderColor = "#e8ddd6"}
+        />
+
+        <button onClick={addEntry} disabled={!newEntry.text.trim()}
+          style={{
+            width: "100%", padding: "14px 0", marginTop: 16, borderRadius: 12,
+            border: "none", cursor: !newEntry.text.trim() ? "default" : "pointer",
+            background: !newEntry.text.trim() ? "#e8ddd6" : accent,
+            color: !newEntry.text.trim() ? textSoft : "#fff",
+            fontFamily: fonts.body, fontSize: 15, fontWeight: 600,
+            transition: "all 0.2s",
+          }}
+        >
+          {justAdded ? "✓ Saved with love!" : "Save to the Vault 💝"}
+        </button>
+      </div>
+    </div>
+  );
+
   // =================== MAIN LAYOUT ===================
   return (
     <div style={{
       minHeight: "100vh", background: bg, fontFamily: fonts.body, color: textMain,
-      maxWidth: 480, margin: "0 auto", padding: "0 0 100px 0",
     }}>
       {/* Header */}
       <div style={{
         padding: "48px 28px 32px", textAlign: "center",
-        background: "linear-gradient(180deg, rgba(201,123,107,0.08) 0%, transparent 100%)",
+        background: "transparent",
         position: "relative",
+        maxWidth: isDesktop ? 900 : 480,
+        margin: "0 auto",
       }}>
         <button onClick={logout} style={{
           position: "absolute", top: 20, right: 20,
@@ -208,7 +394,11 @@ export default function LoveVault() {
       </div>
 
       {/* SOS Button */}
-      <div style={{ padding: "0 28px", marginBottom: 28 }}>
+      <div style={{
+        padding: "0 28px", marginBottom: 28,
+        maxWidth: isDesktop ? 900 : 480,
+        margin: "0 auto 28px",
+      }}>
         <button onClick={enterSOS} disabled={entries.length === 0} style={{
           width: "100%", padding: "18px 24px",
           background: entries.length === 0 ? "#e8ddd6" : "linear-gradient(135deg, #c97b6b 0%, #b5686a 50%, #a05f7a 100%)",
@@ -225,192 +415,43 @@ export default function LoveVault() {
         </button>
       </div>
 
-      {/* Tab Navigation */}
-      <div style={{
-        display: "flex", gap: 0, margin: "0 28px 24px", background: "rgba(255,255,255,0.5)",
-        borderRadius: 12, padding: 4,
-      }}>
-        {[["home", "📖 Browse"], ["add", "✍️ Add New"]].map(([v, label]) => (
-          <button key={v} onClick={() => setView(v)} style={{
-            flex: 1, padding: "10px 0", border: "none", borderRadius: 10,
-            background: view === v ? "#fff" : "transparent",
-            boxShadow: view === v ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
-            color: view === v ? textMain : textSoft,
-            fontFamily: fonts.body, fontSize: 14, fontWeight: view === v ? 600 : 400,
-            cursor: "pointer", transition: "all 0.2s",
-          }}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* ====== ADD VIEW ====== */}
-      {view === "add" && (
-        <div style={{ padding: "0 28px" }}>
-          <div style={{
-            background: cardBg, borderRadius: 20, padding: 28,
-            border: "1px solid rgba(201,123,107,0.12)",
-            backdropFilter: "blur(10px)",
-          }}>
-            <div style={{
-              fontFamily: fonts.accent, fontSize: 16, color: accent,
-              marginBottom: 20, textAlign: "center",
-            }}>
-              Writing as {user.displayName} 💕
-            </div>
-
-            <label style={{ fontFamily: fonts.body, fontSize: 13, fontWeight: 600, color: textSoft, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
-              Category
-            </label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
-              {CATEGORIES.map((cat) => (
-                <button key={cat.id} onClick={() => setNewEntry({ ...newEntry, category: cat.id })} style={{
-                  padding: "8px 14px", borderRadius: 20,
-                  border: newEntry.category === cat.id ? `2px solid ${accent}` : "2px solid #e8ddd6",
-                  background: newEntry.category === cat.id ? cat.color + "40" : "transparent",
-                  color: newEntry.category === cat.id ? textMain : textSoft,
-                  fontFamily: fonts.body, fontSize: 13, cursor: "pointer",
-                  transition: "all 0.15s",
-                }}>
-                  {cat.emoji} {cat.label}
-                </button>
-              ))}
-            </div>
-
-            <label style={{ fontFamily: fonts.body, fontSize: 13, fontWeight: 600, color: textSoft, display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>
-              What happened?
-            </label>
-            <textarea
-              value={newEntry.text}
-              onChange={(e) => setNewEntry({ ...newEntry, text: e.target.value })}
-              placeholder="e.g. She went to sleep on the couch so I wouldn't be woken up by her teeth grinding, even though the couch is uncomfortable..."
-              style={{
-                width: "100%", minHeight: 120, padding: 16, borderRadius: 14,
-                border: "2px solid #e8ddd6", background: "rgba(255,255,255,0.6)",
-                fontFamily: fonts.body, fontSize: 15, color: textMain, lineHeight: 1.6,
-                resize: "vertical", outline: "none", boxSizing: "border-box",
-                transition: "border-color 0.2s",
-              }}
-              onFocus={(e) => e.target.style.borderColor = accent}
-              onBlur={(e) => e.target.style.borderColor = "#e8ddd6"}
-            />
-
-            <button onClick={addEntry} disabled={!newEntry.text.trim()}
-              style={{
-                width: "100%", padding: "14px 0", marginTop: 16, borderRadius: 12,
-                border: "none", cursor: !newEntry.text.trim() ? "default" : "pointer",
-                background: !newEntry.text.trim() ? "#e8ddd6" : accent,
-                color: !newEntry.text.trim() ? textSoft : "#fff",
-                fontFamily: fonts.body, fontSize: 15, fontWeight: 600,
-                transition: "all 0.2s",
-              }}
-            >
-              {justAdded ? "✓ Saved with love!" : "Save to the Vault 💝"}
-            </button>
+      {/* Content area */}
+      {isDesktop ? (
+        /* Desktop: two columns, no tabs */
+        <div style={{
+          maxWidth: 900, margin: "0 auto", padding: "0 28px 100px",
+          display: "flex", gap: 32, alignItems: "flex-start",
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {browsePanel}
+          </div>
+          <div style={{ width: 340, flexShrink: 0 }}>
+            {addPanel}
           </div>
         </div>
-      )}
-
-      {/* ====== BROWSE VIEW ====== */}
-      {view === "home" && (
-        <div style={{ padding: "0 28px" }}>
-          {/* Filter chips */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
-            <button onClick={() => setFilterCat("all")} style={{
-              padding: "6px 14px", borderRadius: 20, border: "none",
-              background: filterCat === "all" ? accent : "rgba(255,255,255,0.5)",
-              color: filterCat === "all" ? "#fff" : textSoft,
-              fontFamily: fonts.body, fontSize: 13, cursor: "pointer",
-            }}>All ({entries.length})</button>
-            {CATEGORIES.map((cat) => {
-              const count = entries.filter((e) => e.category === cat.id).length;
-              if (count === 0) return null;
-              return (
-                <button key={cat.id} onClick={() => setFilterCat(cat.id)} style={{
-                  padding: "6px 14px", borderRadius: 20, border: "none",
-                  background: filterCat === cat.id ? cat.color : "rgba(255,255,255,0.5)",
-                  color: filterCat === cat.id ? textMain : textSoft,
-                  fontFamily: fonts.body, fontSize: 13, cursor: "pointer",
-                }}>
-                  {cat.emoji} {count}
-                </button>
-              );
-            })}
+      ) : (
+        /* Mobile: tabbed layout */
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 0 100px 0" }}>
+          <div style={{
+            display: "flex", gap: 0, margin: "0 28px 24px", background: "rgba(255,255,255,0.5)",
+            borderRadius: 12, padding: 4,
+          }}>
+            {[["home", "📖 Browse"], ["add", "✍️ Add New"]].map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)} style={{
+                flex: 1, padding: "10px 0", border: "none", borderRadius: 10,
+                background: view === v ? "#fff" : "transparent",
+                boxShadow: view === v ? "0 2px 8px rgba(0,0,0,0.06)" : "none",
+                color: view === v ? textMain : textSoft,
+                fontFamily: fonts.body, fontSize: 14, fontWeight: view === v ? 600 : 400,
+                cursor: "pointer", transition: "all 0.2s",
+              }}>
+                {label}
+              </button>
+            ))}
           </div>
 
-          {/* Entries */}
-          {filteredEntries.length === 0 ? (
-            <div style={{
-              textAlign: "center", padding: "60px 20px",
-              background: cardBg, borderRadius: 20,
-            }}>
-              <p style={{ fontSize: 40, marginBottom: 12 }}>📝</p>
-              <p style={{ fontFamily: fonts.display, fontSize: 18, color: textMain, marginBottom: 8 }}>
-                No memories yet
-              </p>
-              <p style={{ fontFamily: fonts.body, fontSize: 14, color: textSoft }}>
-                Start adding the little things you do for each other
-              </p>
-              <button onClick={() => setView("add")} style={{
-                marginTop: 16, padding: "10px 24px", borderRadius: 10,
-                border: "none", background: accent, color: "#fff",
-                fontFamily: fonts.body, fontSize: 14, cursor: "pointer",
-              }}>
-                Add your first memory
-              </button>
-            </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {filteredEntries.map((entry) => {
-                const cat = getCat(entry.category);
-                return (
-                  <div key={entry.id} style={{
-                    background: cardBg, borderRadius: 16, padding: "20px 22px",
-                    border: "1px solid rgba(201,123,107,0.08)",
-                    borderLeft: `4px solid ${cat.color}`,
-                    transition: "transform 0.15s",
-                    position: "relative",
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>{cat.emoji}</span>
-                        <span style={{
-                          fontFamily: fonts.body, fontSize: 12, fontWeight: 600,
-                          color: textSoft, textTransform: "uppercase", letterSpacing: 0.5,
-                        }}>
-                          {cat.label}
-                        </span>
-                      </div>
-                      <button onClick={() => deleteEntry(entry.id)} style={{
-                        background: "none", border: "none", color: "#d4c5c5",
-                        cursor: "pointer", fontSize: 16, padding: "0 4px",
-                      }} title="Delete">×</button>
-                    </div>
-                    <p style={{
-                      fontFamily: fonts.body, fontSize: 15, lineHeight: 1.65,
-                      color: textMain, margin: "0 0 12px 0",
-                    }}>
-                      {entry.text}
-                    </p>
-                    <div style={{
-                      display: "flex", justifyContent: "space-between", alignItems: "center",
-                    }}>
-                      <span style={{
-                        fontFamily: fonts.accent, fontSize: 14, color: textSoft,
-                      }}>
-                        — {entry.author_name}
-                      </span>
-                      <span style={{
-                        fontFamily: fonts.body, fontSize: 12, color: "#c4b5b5",
-                      }}>
-                        {formatDate(entry.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {view === "home" && browsePanel}
+          {view === "add" && addPanel}
         </div>
       )}
     </div>
