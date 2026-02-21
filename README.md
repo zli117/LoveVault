@@ -1,5 +1,8 @@
 # The Love Vault
 
+<img width="1352" height="1301" alt="image" src="https://github.com/user-attachments/assets/717d4484-5fdc-4618-bb23-7141309a13be" />
+
+
 A shared journal for tracking acts of love between partners. Each person has their own account, and both see all entries. Includes an "SOS mode" that shows random memories when you need a reminder that everything is okay.
 
 Built as a PWA — installable on your phone's home screen.
