@@ -1,0 +1,14 @@
+services:
+  lovevault:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ${DATA_DIR:-./data}:/data
+    environment:
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-to-something-random}
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
