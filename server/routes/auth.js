@@ -61,6 +61,21 @@ router.post("/logout", (req, res) => {
   });
 });
 
+router.post("/change-password", async (req, res) => {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const { password } = req.body;
+  if (!password || password.length < 4) {
+    return res.status(400).json({ error: "Password must be at least 4 characters" });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, req.session.userId);
+  res.json({ ok: true });
+});
+
 router.get("/me", (req, res) => {
   if (!req.session.userId) {
     return res.status(401).json({ error: "Not authenticated" });

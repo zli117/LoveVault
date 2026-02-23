@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../AuthContext.jsx";
-import { entries as entriesApi } from "../api.js";
+import { entries as entriesApi, auth as authApi } from "../api.js";
 
 const CATEGORIES = [
   { id: "sacrifice", emoji: "🛡️", label: "Sacrifices", color: "#e8b4b8" },
@@ -41,6 +41,10 @@ export default function LoveVault() {
   const [loadingDone, setLoadingDone] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [filterCat, setFilterCat] = useState("all");
+  const [showAccount, setShowAccount] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
   const sosOrderRef = useRef([]);
 
   // Load entries from API
@@ -362,6 +366,124 @@ export default function LoveVault() {
     <div style={{
       minHeight: "100vh", background: bg, fontFamily: fonts.body, color: textMain,
     }}>
+      {/* Account Modal */}
+      {showAccount && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.3)", display: "flex",
+          alignItems: "center", justifyContent: "center",
+          zIndex: 1000, padding: 24,
+        }} onClick={() => setShowAccount(false)}>
+          <div style={{
+            background: "#fdf2e9", borderRadius: 20, padding: 32,
+            maxWidth: 380, width: "100%",
+            border: "1px solid rgba(201,123,107,0.12)",
+          }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{
+              fontFamily: fonts.display, fontSize: 22, fontWeight: 600,
+              color: textMain, margin: "0 0 4px 0", textAlign: "center",
+            }}>
+              Account
+            </h2>
+            <p style={{
+              fontFamily: fonts.accent, fontSize: 15, color: textSoft,
+              textAlign: "center", marginBottom: 24,
+            }}>
+              Signed in as {user.displayName}
+            </p>
+
+            <label style={{
+              fontFamily: fonts.body, fontSize: 13, fontWeight: 600, color: textSoft,
+              display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1,
+            }}>
+              New password
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Enter new password"
+              autoComplete="new-password"
+              style={{
+                width: "100%", padding: "12px 16px", borderRadius: 12,
+                border: "2px solid #e8ddd6", background: "rgba(255,255,255,0.6)",
+                fontFamily: fonts.body, fontSize: 15, color: textMain,
+                outline: "none", boxSizing: "border-box", marginBottom: 12,
+              }}
+              onFocus={(e) => e.target.style.borderColor = accent}
+              onBlur={(e) => e.target.style.borderColor = "#e8ddd6"}
+            />
+
+            <label style={{
+              fontFamily: fonts.body, fontSize: 13, fontWeight: 600, color: textSoft,
+              display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1,
+            }}>
+              Confirm password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Repeat new password"
+              autoComplete="new-password"
+              style={{
+                width: "100%", padding: "12px 16px", borderRadius: 12,
+                border: "2px solid #e8ddd6", background: "rgba(255,255,255,0.6)",
+                fontFamily: fonts.body, fontSize: 15, color: textMain,
+                outline: "none", boxSizing: "border-box", marginBottom: 16,
+              }}
+              onFocus={(e) => e.target.style.borderColor = accent}
+              onBlur={(e) => e.target.style.borderColor = "#e8ddd6"}
+            />
+
+            {pwMsg && (
+              <p style={{
+                fontFamily: fonts.body, fontSize: 14, textAlign: "center",
+                marginBottom: 12,
+                color: pwMsg.includes("updated") ? "#27ae60" : "#c0392b",
+              }}>
+                {pwMsg}
+              </p>
+            )}
+
+            <button onClick={async () => {
+              if (newPassword.length < 4) {
+                setPwMsg("Password must be at least 4 characters");
+                return;
+              }
+              if (newPassword !== confirmPassword) {
+                setPwMsg("Passwords don't match");
+                return;
+              }
+              try {
+                await authApi.changePassword(newPassword);
+                setPwMsg("Password updated!");
+                setNewPassword("");
+                setConfirmPassword("");
+              } catch (e) {
+                setPwMsg(e.message);
+              }
+            }} style={{
+              width: "100%", padding: "14px 0", borderRadius: 12,
+              border: "none", cursor: "pointer",
+              background: accent, color: "#fff",
+              fontFamily: fonts.body, fontSize: 15, fontWeight: 600,
+              marginBottom: 12,
+            }}>
+              Change password
+            </button>
+
+            <button onClick={() => setShowAccount(false)} style={{
+              width: "100%", padding: "10px 0", borderRadius: 12,
+              border: "1px solid #e8ddd6", background: "transparent",
+              color: textSoft, fontFamily: fonts.body, fontSize: 14, cursor: "pointer",
+            }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{
         padding: "48px 28px 32px", textAlign: "center",
@@ -370,14 +492,25 @@ export default function LoveVault() {
         maxWidth: isDesktop ? 900 : 480,
         margin: "0 auto",
       }}>
-        <button onClick={logout} style={{
+        <div style={{
           position: "absolute", top: 20, right: 20,
-          background: "rgba(255,255,255,0.5)", border: "1px solid #e8ddd6",
-          color: textSoft, padding: "6px 14px", borderRadius: 20,
-          fontFamily: fonts.body, fontSize: 12, cursor: "pointer",
+          display: "flex", gap: 8,
         }}>
-          Sign out
-        </button>
+          <button onClick={() => { setShowAccount(true); setPwMsg(""); setNewPassword(""); setConfirmPassword(""); }} style={{
+            background: "rgba(255,255,255,0.5)", border: "1px solid #e8ddd6",
+            color: textSoft, padding: "6px 14px", borderRadius: 20,
+            fontFamily: fonts.body, fontSize: 12, cursor: "pointer",
+          }}>
+            Account
+          </button>
+          <button onClick={logout} style={{
+            background: "rgba(255,255,255,0.5)", border: "1px solid #e8ddd6",
+            color: textSoft, padding: "6px 14px", borderRadius: 20,
+            fontFamily: fonts.body, fontSize: 12, cursor: "pointer",
+          }}>
+            Sign out
+          </button>
+        </div>
         <div style={{ fontSize: 36, marginBottom: 8 }}>🏠</div>
         <h1 style={{
           fontFamily: fonts.display, fontSize: 28, fontWeight: 600,

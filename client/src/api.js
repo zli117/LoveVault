@@ -28,6 +28,11 @@ export const auth = {
       body: JSON.stringify({ username, password, displayName }),
     }),
   logout: () => request("/auth/logout", { method: "POST" }),
+  changePassword: (password) =>
+    request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
 };
 
 export const entries = {
