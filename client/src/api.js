@@ -6,10 +6,6 @@ async function request(path, options = {}) {
     ...options,
   });
 
-  if (res.status === 401) {
-    throw new Error("Not authenticated");
-  }
-
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Request failed");
   return data;

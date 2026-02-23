@@ -48,10 +48,15 @@ router.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid username or password" });
   }
 
-  req.session.userId = user.id;
-  req.session.displayName = user.display_name;
-
-  res.json({ id: user.id, displayName: user.display_name });
+  req.session.regenerate((err) => {
+    if (err) return res.status(500).json({ error: "Session error" });
+    req.session.userId = user.id;
+    req.session.displayName = user.display_name;
+    req.session.save((err) => {
+      if (err) return res.status(500).json({ error: "Session error" });
+      res.json({ id: user.id, displayName: user.display_name });
+    });
+  });
 });
 
 router.post("/logout", (req, res) => {
