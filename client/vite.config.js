@@ -9,6 +9,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -30,11 +32,7 @@ export default defineConfig({
           },
           {
             urlPattern: /\/api\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "api-cache",
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-            },
+            handler: "NetworkOnly",
           },
         ],
       },
@@ -42,22 +40,36 @@ export default defineConfig({
         name: "The Love Vault",
         short_name: "Love Vault",
         description: "Evidence that we love each other, even when we forget",
-        theme_color: "#fef9f4",
-        background_color: "#fef9f4",
+        theme_color: "#fdf2e9",
+        background_color: "#fdf2e9",
         display: "standalone",
         orientation: "portrait",
         start_url: "/",
+        id: "/",
         icons: [
+          {
+            src: "/icons/icon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any",
+          },
           {
             src: "/icons/icon-192x192.png",
             sizes: "192x192",
             type: "image/png",
+            purpose: "any",
           },
           {
             src: "/icons/icon-512x512.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "any maskable",
+            purpose: "any",
+          },
+          {
+            src: "/icons/icon-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },
