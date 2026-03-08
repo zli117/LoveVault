@@ -8,6 +8,7 @@ const CATEGORIES = [
   { id: "surprise", emoji: "✨", label: "Sweet Moments", color: "#b8d4e3" },
   { id: "support", emoji: "🤝", label: "Support", color: "#c3d9c6" },
   { id: "patience", emoji: "🕊️", label: "Patience", color: "#d4c5e2" },
+  { id: "fun", emoji: "🎉", label: "Fun", color: "#f0c4a8" },
 ];
 
 // Warm, hand-crafted font stack
